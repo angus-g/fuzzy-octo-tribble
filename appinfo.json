@@ -1,0 +1,19 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "angus-pebble@agibson.me",
+    "longName": "Fuzzier Face",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "3",
+    "shortName": "Fuzzier Face",
+    "uuid": "7487046e-68ac-4a57-9df0-9675b661a26c",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
