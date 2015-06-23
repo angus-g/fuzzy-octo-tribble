@@ -1,6 +1,5 @@
 #include <pebble.h>
-
-#define TIME_LINES 3
+#include "fuzzy.h"
   
 static Window *s_main_window;
 static TextLayer *s_text_layers[TIME_LINES];
@@ -27,19 +26,30 @@ static void main_window_unload(Window *window) {
 static void main_window_button_handler(ClickRecognizerRef recognizer, void *context) {
   ButtonId button = click_recognizer_get_button_id(recognizer);
   
+  time_t ts = mktime(s_time);
+  
   // change the time on button press
   if (button == BUTTON_ID_UP)
-    s_time->tm_min++;
+    ts += 60;
+  else if (button == BUTTON_ID_DOWN)
+    ts -= 60;
   else
-    s_time->tm_min--;
+    ts += 3600;
+  
+  s_time = localtime(&ts);
+  
+  static char buf[10];
+  strftime(buf, 9, "%R", s_time);
+  APP_LOG(APP_LOG_LEVEL_INFO, "%s: %s", buf, fuzzy_time(s_time));
 }
 
 static void main_window_click_config_provider(void *context) {
-  // detect buttons with 100ms repetition
+  // detect buttons with 100ms repetition  
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100,
                                           main_window_button_handler);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100,
                                           main_window_button_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, main_window_button_handler);
 }
   
 static void init() {
@@ -62,6 +72,8 @@ static void init() {
   
   // register click config provider
   window_set_click_config_provider(s_main_window, main_window_click_config_provider);
+  
+  APP_LOG(APP_LOG_LEVEL_INFO, fuzzy_time(s_time));
 }
 
 static void deinit() {
