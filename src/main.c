@@ -5,6 +5,13 @@ static Window *s_main_window;
 static TextLayer *s_text_layers[TIME_LINES];
 static struct tm *s_time;
 
+static void update_time() {
+  const fuzzy_time_t *f = fuzzy_time(s_time);
+  
+  for (int i = 0; i < f->num_lines; i++)
+    APP_LOG(APP_LOG_LEVEL_INFO, f->lines[i]);
+}
+
 // handle tick
 // update the clock every minute
 // request weather every half hour
@@ -38,9 +45,7 @@ static void main_window_button_handler(ClickRecognizerRef recognizer, void *cont
   
   s_time = localtime(&ts);
   
-  static char buf[10];
-  strftime(buf, 9, "%R", s_time);
-  APP_LOG(APP_LOG_LEVEL_INFO, "%s: %s", buf, fuzzy_time(s_time));
+  update_time();
 }
 
 static void main_window_click_config_provider(void *context) {
@@ -72,8 +77,6 @@ static void init() {
   
   // register click config provider
   window_set_click_config_provider(s_main_window, main_window_click_config_provider);
-  
-  APP_LOG(APP_LOG_LEVEL_INFO, fuzzy_time(s_time));
 }
 
 static void deinit() {
