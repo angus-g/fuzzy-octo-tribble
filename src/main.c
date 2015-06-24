@@ -3,13 +3,11 @@
 #include "text.h"
   
 #define LAYER_HEIGHT 50
-#define SCREEN_WIDTH 144
 #define SCREEN_HEIGHT 168
   
 static Window *s_main_window;
 static Layer *s_text_layers[TIME_LINES];
 static struct tm *s_time;
-static GFont s_font_bold, s_font_light;
 
 static void update_time() {
   // get the fuzzy time for the current time
@@ -22,6 +20,7 @@ static void update_time() {
     
     // set font
     //text_layer_set_font(s_text_layers[i], f->bold_line == i ? s_font_bold : s_font_light);
+    smooth_text_layer_set_bold(s_text_layers[i], f->bold_line == i);
     smooth_text_layer_set_text(s_text_layers[i], f->lines[i]);
     
     layer_set_hidden(s_text_layers[i], false);
@@ -94,9 +93,7 @@ static void init() {
   current_time = time(NULL);
   s_time = localtime(&current_time);
   
-  // initialise fonts
-  s_font_light = fonts_get_system_font(FONT_KEY_BITHAM_42_LIGHT);
-  s_font_bold = fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD);
+  smooth_text_init();
   
   // create main window
   s_main_window = window_create();
@@ -104,7 +101,7 @@ static void init() {
     .load = main_window_load,
     .unload = main_window_unload
   });
-  window_set_background_color(s_main_window, GColorBlack);
+  window_set_background_color(s_main_window, GColorWhite);
   window_stack_push(s_main_window, true); // push with animation enabled
   
   // minute-resolution timer for updating clock
@@ -115,6 +112,7 @@ static void init() {
 }
 
 static void deinit() {
+  smooth_text_deinit();
   window_destroy(s_main_window);
 }
 
