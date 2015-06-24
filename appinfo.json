@@ -1,5 +1,7 @@
 {
-    "appKeys": {},
+    "appKeys": {
+        "KEY_TEMP": 0
+    },
     "capabilities": [
         ""
     ],
@@ -8,6 +10,11 @@
     "projectType": "native",
     "resources": {
         "media": [
+            {
+                "file": "images/small.png",
+                "name": "IMAGE_SOURCE_SANS_SMALL",
+                "type": "png"
+            },
             {
                 "file": "images/light.png",
                 "name": "IMAGE_SOURCE_SANS_LIGHT",
@@ -22,6 +29,10 @@
     },
     "sdkVersion": "3",
     "shortName": "Fuzzier Face",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
     "uuid": "7487046e-68ac-4a57-9df0-9675b661a26c",
     "versionLabel": "1.0",
     "watchapp": {

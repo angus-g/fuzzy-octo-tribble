@@ -2,11 +2,17 @@
 #include "fuzzy.h"
 #include "text.h"
   
+// weather data keys
+enum {
+  KEY_TEMP = 0
+};
+  
 #define LAYER_HEIGHT 40
 #define SCREEN_HEIGHT 168
   
 static Window *s_main_window;
 static Layer *s_text_layers[TIME_LINES];
+static Layer *s_weather_layer;
 static struct tm *s_time;
 
 static void update_time() {
@@ -19,8 +25,7 @@ static void update_time() {
                                            SCREEN_WIDTH, LAYER_HEIGHT));
     
     // set font
-    //text_layer_set_font(s_text_layers[i], f->bold_line == i ? s_font_bold : s_font_light);
-    smooth_text_layer_set_bold(s_text_layers[i], f->bold_line == i);
+    smooth_text_layer_set_font(s_text_layers[i], f->bold_line == i ? FontBold : FontLight);
     smooth_text_layer_set_text(s_text_layers[i], f->lines[i]);
     
     layer_set_hidden(s_text_layers[i], false);
@@ -42,22 +47,35 @@ static void main_window_load(Window *window) {
   
   // initialise text layers
   for (int i = 0; i < TIME_LINES; i++) {
-    s_text_layers[i] = smooth_text_layer_create(GRectZero); // position updated later
+    s_text_layers[i] = smooth_text_layer_create(GRectZero, FontLight); // position updated later
     layer_set_hidden(s_text_layers[i], true);
-    
-    // set initial text properties
-    //text_layer_set_font(s_text_layers[i], s_font_light);
-    //text_layer_set_text_alignment(s_text_layers[i], GTextAlignmentCenter);
-    //text_layer_set_background_color(s_text_layers[i], GColorClear);
-    //text_layer_set_text_color(s_text_layers[i], GColorWhite);
-    
     layer_add_child(root_layer, s_text_layers[i]);
   }
+  
+  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20), FontSmall);
+  layer_add_child(root_layer, s_weather_layer);
 }
 
 static void main_window_unload(Window *window) {
   for (int i = 0; i < TIME_LINES; i++)
     layer_destroy(s_text_layers[i]);
+}
+
+static void inbox_received_callback(DictionaryIterator *iter, void *context) {
+  Tuple *t = dict_read_first(iter);
+  
+  static char weather_buf[10];
+  
+  while (t) {
+    switch (t->key) {
+    case KEY_TEMP:
+      snprintf(weather_buf, sizeof(weather_buf), "%dDC", (int)t->value->int32);
+    }
+    
+    t = dict_read_next(iter);
+  }
+  
+  smooth_text_layer_set_text(s_weather_layer, weather_buf);
 }
 
 static void main_window_button_handler(ClickRecognizerRef recognizer, void *context) {
@@ -106,6 +124,10 @@ static void init() {
   
   // minute-resolution timer for updating clock
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  
+  // register for inbox messages from weather
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
   
   // register click config provider
   window_set_click_config_provider(s_main_window, main_window_click_config_provider);
