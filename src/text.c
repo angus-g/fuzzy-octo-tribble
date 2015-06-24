@@ -11,7 +11,7 @@ static void smooth_text_layer_update(Layer *layer, GContext *ctx) {
   SmoothTextLayer *stl = (SmoothTextLayer *)layer_get_data(layer);
   
   // not initialised with a font
-  if (!stl->font) return;
+  if (!stl->font || !stl->text) return;
   
   int l = strlen(stl->text);
   int pen = 0;
@@ -55,7 +55,7 @@ void smooth_text_layer_set_font(Layer *layer, FontType font) {
   }
 }
 
-// initialise a SmoothTextLayer with a given frame
+// initialise a SmoothTextLayer with a given frame, font and alignment
 Layer *smooth_text_layer_create(GRect frame, FontType font, GAlign align) {
   // create an original pebble layer
   Layer *l = layer_create_with_data(frame, sizeof(SmoothTextLayer));
@@ -94,7 +94,7 @@ void smooth_text_init() {
   textdata_init(s_bmp_bold, s_font_bold);
   
   // light font (for minutes)
-  s_bmp_light= gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SOURCE_SANS_LIGHT);
+  s_bmp_light = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SOURCE_SANS_LIGHT);
   s_font_light = m_source_sans_light;
   textdata_init(s_bmp_light, s_font_light);
   

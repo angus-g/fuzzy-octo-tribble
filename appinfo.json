@@ -30,7 +30,6 @@
     "sdkVersion": "3",
     "shortName": "Fuzzier Face",
     "targetPlatforms": [
-        "aplite",
         "basalt"
     ],
     "uuid": "7487046e-68ac-4a57-9df0-9675b661a26c",

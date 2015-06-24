@@ -2,6 +2,8 @@
 #include "fuzzy.h"
 #include "text.h"
   
+#define DELAY_MS 30
+  
 // weather data keys
 enum {
   KEY_TEMP = 0
@@ -13,33 +15,90 @@ enum {
 static Window *s_main_window;
 static Layer *s_text_layers[TIME_LINES];
 static Layer *s_weather_layer;
-static struct tm *s_time;
+static fuzzy_time_t s_fuzzy;
+static PropertyAnimation *s_prop_anims_out[TIME_LINES];
+static PropertyAnimation *s_prop_anims_in[TIME_LINES];
 
-static void update_time() {
-  // get the fuzzy time for the current time
-  const fuzzy_time_t *f = fuzzy_time(s_time);
+static void update_time_stopped(Animation *anim, bool finished, void *context) {
+  int i = (int)context;
+  Layer *l = s_text_layers[i];
   
-  for (int i = 0; i < f->num_lines; i++) {
-    // position the layer and unhide
-    layer_set_frame(s_text_layers[i], GRect(0, SCREEN_HEIGHT / 2 - ((float)f->num_lines / 2 * LAYER_HEIGHT) + i*LAYER_HEIGHT,
-                                           SCREEN_WIDTH, LAYER_HEIGHT));
-    
-    // set font
-    smooth_text_layer_set_font(s_text_layers[i], f->bold_line == i ? FontBold : FontLight);
-    smooth_text_layer_set_text(s_text_layers[i], f->lines[i]);
-    
-    layer_set_hidden(s_text_layers[i], false);
+  // layer is not part of the current time
+  if (i >= s_fuzzy.num_lines) {
+    layer_set_hidden(l, true);
+    return;
   }
   
-  for (int i = f->num_lines; i < TIME_LINES; i++)
-    layer_set_hidden(s_text_layers[i], true);
+  // start right of screen
+  GRect from_frame = GRect(SCREEN_WIDTH,
+                           SCREEN_HEIGHT / 2 - ((float)s_fuzzy.num_lines / 2 * LAYER_HEIGHT) + i*LAYER_HEIGHT,
+                           SCREEN_WIDTH, LAYER_HEIGHT);
+  GRect to_frame = from_frame;
+  to_frame.origin.x = 0; // shift frame to left of screen
+  
+  layer_set_hidden(l, false);
+  smooth_text_layer_set_font(l, s_fuzzy.bold_line == i ? FontBold : FontLight);
+  smooth_text_layer_set_text(l, s_fuzzy.lines[i]);
+  
+  s_prop_anims_in[i] = property_animation_create_layer_frame(l, &from_frame, &to_frame);
+  animation_schedule(property_animation_get_animation(s_prop_anims_in[i]));
+}
+
+static void update_time() {
+  // initialise the current time
+  time_t current_time = time(NULL);
+  struct tm *s_time = localtime(&current_time);
+  
+  // get the fuzzy time for the current time
+  static fuzzy_time_t f_prev;
+  s_fuzzy = *fuzzy_time(s_time);
+  
+  // determine changed lines
+  bool changed[TIME_LINES];
+  for (int i = 0; i < TIME_LINES; i++) {
+    if (i < s_fuzzy.num_lines && f_prev.lines[i] && !strcmp(f_prev.lines[i], s_fuzzy.lines[i]))
+      changed[i] = false;
+    else
+      changed[i] = true;
+  }
+  
+  int change_idx = 0;
+  
+  // animate out changed times
+  for (int i = 0; i < TIME_LINES; i++) {
+    if (!changed[i]) continue;
+    
+    // move the current layer off-screen
+    Layer *l = s_text_layers[i];
+    GRect from_frame = layer_get_frame(l);
+    GRect to_frame = from_frame;
+    to_frame.origin.x -= to_frame.size.w;
+    
+    s_prop_anims_out[i] = property_animation_create_layer_frame(l, &from_frame, &to_frame);
+    Animation *anim = property_animation_get_animation(s_prop_anims_out[i]);
+    animation_set_delay(anim, DELAY_MS * change_idx);
+    animation_set_handlers(anim, (AnimationHandlers) { .stopped = update_time_stopped }, (void *)i);
+    animation_schedule(anim);
+      
+    change_idx++;
+  }
+  
+  f_prev = s_fuzzy;
 }
 
 // handle tick
 // update the clock every minute
 // request weather every half hour
 static void tick_handler(struct tm *tick, TimeUnits unit) {
+  update_time();
   
+  // request new weather every half hour
+  if (tick->tm_min % 30 == 0) {
+    DictionaryIterator *iter;
+    app_message_outbox_begin(&iter);
+    dict_write_uint8(iter, 0, 0);
+    app_message_outbox_send();
+  }
 }
 
 static void main_window_load(Window *window) {
@@ -52,13 +111,15 @@ static void main_window_load(Window *window) {
     layer_add_child(root_layer, s_text_layers[i]);
   }
   
-  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20), FontSmall, GAlignLeft);
+  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40), FontSmall, GAlignLeft);
   layer_add_child(root_layer, s_weather_layer);
 }
 
 static void main_window_unload(Window *window) {
   for (int i = 0; i < TIME_LINES; i++)
     layer_destroy(s_text_layers[i]);
+  
+  layer_destroy(s_weather_layer);
 }
 
 static void inbox_received_callback(DictionaryIterator *iter, void *context) {
@@ -77,40 +138,8 @@ static void inbox_received_callback(DictionaryIterator *iter, void *context) {
   
   smooth_text_layer_set_text(s_weather_layer, weather_buf);
 }
-
-static void main_window_button_handler(ClickRecognizerRef recognizer, void *context) {
-  ButtonId button = click_recognizer_get_button_id(recognizer);
-  
-  time_t ts = mktime(s_time);
-  
-  // change the time on button press
-  if (button == BUTTON_ID_UP)
-    ts += 60;
-  else if (button == BUTTON_ID_DOWN)
-    ts -= 60;
-  else
-    ts += 3600;
-  
-  s_time = localtime(&ts);
-  
-  update_time();
-}
-
-static void main_window_click_config_provider(void *context) {
-  // detect buttons with 100ms repetition  
-  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100,
-                                          main_window_button_handler);
-  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100,
-                                          main_window_button_handler);
-  window_single_click_subscribe(BUTTON_ID_SELECT, main_window_button_handler);
-}
   
 static void init() {
-  // initialise the current time
-  time_t current_time;
-  current_time = time(NULL);
-  s_time = localtime(&current_time);
-  
   smooth_text_init();
   
   // create main window
@@ -128,9 +157,6 @@ static void init() {
   // register for inbox messages from weather
   app_message_register_inbox_received(inbox_received_callback);
   app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
-  
-  // register click config provider
-  window_set_click_config_provider(s_main_window, main_window_click_config_provider);
 }
 
 static void deinit() {
