@@ -11,12 +11,12 @@
             {
                 "file": "images/light.png",
                 "name": "IMAGE_SOURCE_SANS_LIGHT",
-                "type": "png-trans"
+                "type": "png"
             },
             {
                 "file": "images/bold.png",
                 "name": "IMAGE_SOURCE_SANS_BOLD",
-                "type": "png-trans"
+                "type": "png"
             }
         ]
     },

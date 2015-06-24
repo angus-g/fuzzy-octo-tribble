@@ -16,7 +16,7 @@ static void smooth_text_layer_update(Layer *layer, GContext *ctx) {
   int w = 0;
   // calculate width of line
   for (int i = 0; i < l; i++)
-    w += stl->font[(int)stl->text[i]].a;
+    w += stl->font[(int)stl->text[i]].a - 2;
   
   GRect bounds = layer_get_bounds(layer);
   int pen = (SCREEN_WIDTH - w) / 2;
@@ -54,29 +54,25 @@ Layer *smooth_text_layer_create(GRect frame) {
   return l;
 }
 
+static void textdata_init(GBitmap *bitmap, TextData *font_data) {
+  // for each non-null letter, create a sub-bitmap in the TextData
+  for (int i = 0; i < NUM_GLYPHS; i++) {
+    if (!font_data[i].a) continue;
+    
+    TextData *d = font_data + i;
+    GRect sub = GRect(d->x, 40 - d->t, d->w + d->l, d->h);
+    font_data[i].b = gbitmap_create_as_sub_bitmap(bitmap, sub);
+  }
+}
+
 void smooth_text_init() {
   s_bmp_bold = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SOURCE_SANS_BOLD);
   s_font_bold = m_source_sans_bold;
-  
-  // for each non-null letter, create a sub-bitmap in the TextData
-  for (int i = 0; i < NUM_GLYPHS; i++) {
-    if (!s_font_bold[i].a) continue;
-    
-    TextData *d = s_font_bold + i;
-    GRect sub = GRect(d->x, 40 - d->t, d->w + d->l, d->h);
-    s_font_bold[i].b = gbitmap_create_as_sub_bitmap(s_bmp_bold, sub);
-  }
+  textdata_init(s_bmp_bold, s_font_bold);
   
   s_bmp_light= gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SOURCE_SANS_LIGHT);
   s_font_light = m_source_sans_light;
-  
-  for (int i = 0; i < NUM_GLYPHS; i++) {
-    if (!s_font_light[i].a) continue;
-    
-    TextData *d = s_font_light + i;
-    GRect sub = GRect(d->x, 40 - d->t, d->w + d->l, d->h);
-    s_font_light[i].b = gbitmap_create_as_sub_bitmap(s_bmp_light, sub);
-  }
+  textdata_init(s_bmp_light, s_font_light);
 }
 
 void smooth_text_deinit() {

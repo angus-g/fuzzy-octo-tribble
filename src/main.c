@@ -2,7 +2,7 @@
 #include "fuzzy.h"
 #include "text.h"
   
-#define LAYER_HEIGHT 50
+#define LAYER_HEIGHT 40
 #define SCREEN_HEIGHT 168
   
 static Window *s_main_window;
@@ -101,7 +101,7 @@ static void init() {
     .load = main_window_load,
     .unload = main_window_unload
   });
-  window_set_background_color(s_main_window, GColorWhite);
+  window_set_background_color(s_main_window, GColorBlack);
   window_stack_push(s_main_window, true); // push with animation enabled
   
   // minute-resolution timer for updating clock
