@@ -9,7 +9,7 @@ enum {
   KEY_TEMP = 0
 };
   
-#define LAYER_HEIGHT 40
+#define LAYER_HEIGHT 35
 #define SCREEN_HEIGHT 168
   
 static Window *s_main_window;

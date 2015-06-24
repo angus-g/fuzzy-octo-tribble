@@ -27,7 +27,7 @@ static void smooth_text_layer_update(Layer *layer, GContext *ctx) {
   
   for (int i = 0; i < l; i++) {
     TextData *d = stl->font + stl->text[i];
-    graphics_draw_bitmap_in_rect(ctx, d->b, GRect(pen, 30 - d->t, d->w + d->l, d->h));
+    graphics_draw_bitmap_in_rect(ctx, d->b, GRect(pen, 27 - d->t, d->w + d->l, d->h));
     pen += d->a - 2;
   }
 }
