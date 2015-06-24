@@ -47,12 +47,12 @@ static void main_window_load(Window *window) {
   
   // initialise text layers
   for (int i = 0; i < TIME_LINES; i++) {
-    s_text_layers[i] = smooth_text_layer_create(GRectZero, FontLight); // position updated later
+    s_text_layers[i] = smooth_text_layer_create(GRectZero, FontLight, GAlignCenter); // position updated later
     layer_set_hidden(s_text_layers[i], true);
     layer_add_child(root_layer, s_text_layers[i]);
   }
   
-  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20), FontSmall);
+  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20), FontSmall, GAlignLeft);
   layer_add_child(root_layer, s_weather_layer);
 }
 

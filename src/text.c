@@ -14,12 +14,16 @@ static void smooth_text_layer_update(Layer *layer, GContext *ctx) {
   if (!stl->font) return;
   
   int l = strlen(stl->text);
-  int w = 0;
-  // calculate width of line
-  for (int i = 0; i < l; i++)
-    w += stl->font[(int)stl->text[i]].a - 2;
+  int pen = 0;
   
-  int pen = (SCREEN_WIDTH - w) / 2;
+  if (stl->align == GAlignCenter) {
+    int w = 0;
+    // calculate width of line
+    for (int i = 0; i < l; i++)
+      w += stl->font[(int)stl->text[i]].a - 2;
+    
+    pen = (SCREEN_WIDTH - w) / 2;
+  }
   
   for (int i = 0; i < l; i++) {
     TextData *d = stl->font + stl->text[i];
@@ -52,7 +56,7 @@ void smooth_text_layer_set_font(Layer *layer, FontType font) {
 }
 
 // initialise a SmoothTextLayer with a given frame
-Layer *smooth_text_layer_create(GRect frame, FontType font) {
+Layer *smooth_text_layer_create(GRect frame, FontType font, GAlign align) {
   // create an original pebble layer
   Layer *l = layer_create_with_data(frame, sizeof(SmoothTextLayer));
   
@@ -60,6 +64,7 @@ Layer *smooth_text_layer_create(GRect frame, FontType font) {
   SmoothTextLayer *stl = (SmoothTextLayer *)layer_get_data(l);
   smooth_text_layer_set_font(l, font);
   stl->text = NULL;
+  stl->align = align;
   
   layer_set_update_proc(l, smooth_text_layer_update);
   
