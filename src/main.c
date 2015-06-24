@@ -1,12 +1,13 @@
 #include <pebble.h>
 #include "fuzzy.h"
+#include "text.h"
   
 #define LAYER_HEIGHT 50
 #define SCREEN_WIDTH 144
 #define SCREEN_HEIGHT 168
   
 static Window *s_main_window;
-static TextLayer *s_text_layers[TIME_LINES];
+static Layer *s_text_layers[TIME_LINES];
 static struct tm *s_time;
 static GFont s_font_bold, s_font_light;
 
@@ -16,18 +17,18 @@ static void update_time() {
   
   for (int i = 0; i < f->num_lines; i++) {
     // position the layer and unhide
-    layer_set_frame((Layer *)s_text_layers[i], GRect(0, SCREEN_HEIGHT / 2 - ((float)f->num_lines / 2 * LAYER_HEIGHT) + i*LAYER_HEIGHT,
+    layer_set_frame(s_text_layers[i], GRect(0, SCREEN_HEIGHT / 2 - ((float)f->num_lines / 2 * LAYER_HEIGHT) + i*LAYER_HEIGHT,
                                            SCREEN_WIDTH, LAYER_HEIGHT));
     
     // set font
-    text_layer_set_font(s_text_layers[i], f->bold_line == i ? s_font_bold : s_font_light);
-    text_layer_set_text(s_text_layers[i], f->lines[i]);
+    //text_layer_set_font(s_text_layers[i], f->bold_line == i ? s_font_bold : s_font_light);
+    smooth_text_layer_set_text(s_text_layers[i], f->lines[i]);
     
-    layer_set_hidden((Layer *)s_text_layers[i], false);
+    layer_set_hidden(s_text_layers[i], false);
   }
   
   for (int i = f->num_lines; i < TIME_LINES; i++)
-    layer_set_hidden((Layer *)s_text_layers[i], true);
+    layer_set_hidden(s_text_layers[i], true);
 }
 
 // handle tick
@@ -42,22 +43,22 @@ static void main_window_load(Window *window) {
   
   // initialise text layers
   for (int i = 0; i < TIME_LINES; i++) {
-    s_text_layers[i] = text_layer_create(GRectZero); // position updated later
-    layer_set_hidden((Layer *)s_text_layers[i], true);
+    s_text_layers[i] = smooth_text_layer_create(GRectZero); // position updated later
+    layer_set_hidden(s_text_layers[i], true);
     
     // set initial text properties
-    text_layer_set_font(s_text_layers[i], s_font_light);
-    text_layer_set_text_alignment(s_text_layers[i], GTextAlignmentCenter);
-    text_layer_set_background_color(s_text_layers[i], GColorClear);
-    text_layer_set_text_color(s_text_layers[i], GColorWhite);
+    //text_layer_set_font(s_text_layers[i], s_font_light);
+    //text_layer_set_text_alignment(s_text_layers[i], GTextAlignmentCenter);
+    //text_layer_set_background_color(s_text_layers[i], GColorClear);
+    //text_layer_set_text_color(s_text_layers[i], GColorWhite);
     
-    layer_add_child(root_layer, (Layer *)s_text_layers[i]);
+    layer_add_child(root_layer, s_text_layers[i]);
   }
 }
 
 static void main_window_unload(Window *window) {
   for (int i = 0; i < TIME_LINES; i++)
-    text_layer_destroy(s_text_layers[i]);
+    layer_destroy(s_text_layers[i]);
 }
 
 static void main_window_button_handler(ClickRecognizerRef recognizer, void *context) {
