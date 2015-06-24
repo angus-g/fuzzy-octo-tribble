@@ -1,5 +1,6 @@
 {
     "appKeys": {
+        "KEY_ICON": 1,
         "KEY_TEMP": 0
     },
     "capabilities": [
@@ -10,6 +11,11 @@
     "projectType": "native",
     "resources": {
         "media": [
+            {
+                "file": "images/weather.png",
+                "name": "IMAGE_WEATHER_ICONS",
+                "type": "png"
+            },
             {
                 "file": "images/small.png",
                 "name": "IMAGE_SOURCE_SANS_SMALL",

@@ -1,12 +1,14 @@
 #include <pebble.h>
 #include "fuzzy.h"
 #include "text.h"
+#include "icons.h"
   
 #define DELAY_MS 30
   
 // weather data keys
 enum {
-  KEY_TEMP = 0
+  KEY_TEMP = 0,
+  KEY_ICON
 };
   
 #define LAYER_HEIGHT 35
@@ -15,9 +17,11 @@ enum {
 static Window *s_main_window;
 static Layer *s_text_layers[TIME_LINES];
 static Layer *s_weather_layer;
+static BitmapLayer *s_icon_layer;
 static fuzzy_time_t s_fuzzy;
 static PropertyAnimation *s_prop_anims_out[TIME_LINES];
 static PropertyAnimation *s_prop_anims_in[TIME_LINES];
+static GBitmap *s_weather_bmp, *s_weather_icons[NUM_ICONS];
 
 static void update_time_stopped(Animation *anim, bool finished, void *context) {
   int i = (int)context;
@@ -56,7 +60,8 @@ static void update_time() {
   // determine changed lines
   bool changed[TIME_LINES];
   for (int i = 0; i < TIME_LINES; i++) {
-    if (i < s_fuzzy.num_lines && f_prev.lines[i] && !strcmp(f_prev.lines[i], s_fuzzy.lines[i]))
+    if (i < s_fuzzy.num_lines && f_prev.lines[i] && !strcmp(f_prev.lines[i], s_fuzzy.lines[i])
+       && !((i == s_fuzzy.bold_line || i == f_prev.bold_line) && s_fuzzy.bold_line != f_prev.bold_line))
       changed[i] = false;
     else
       changed[i] = true;
@@ -101,6 +106,23 @@ static void tick_handler(struct tm *tick, TimeUnits unit) {
   }
 }
 
+// initialise and break up the icon sprite sheet
+static void weather_icons_init() {
+  s_weather_bmp = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WEATHER_ICONS);
+  
+  for (int i = 0; i < NUM_ICONS; i++) {
+    TextData *d = m_weather_icons + i;
+    GRect sub = GRect(d->x, 40 - d->t, d->w + d->l, d->h);
+    s_weather_icons[i] = gbitmap_create_as_sub_bitmap(s_weather_bmp, sub);
+  }
+}
+
+static void weather_icons_deinit() {
+  for (int i = 0; i < NUM_ICONS; i++)
+    gbitmap_destroy(s_weather_icons[i]);
+  gbitmap_destroy(s_weather_bmp);
+}
+
 static void main_window_load(Window *window) {
   Layer *root_layer = window_get_root_layer(window);
   
@@ -111,8 +133,15 @@ static void main_window_load(Window *window) {
     layer_add_child(root_layer, s_text_layers[i]);
   }
   
-  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40), FontSmall, GAlignLeft);
+  // temperature
+  s_weather_layer = smooth_text_layer_create(GRect(5, SCREEN_HEIGHT - 40, SCREEN_WIDTH / 2, 40), FontSmall, GAlignLeft);
   layer_add_child(root_layer, s_weather_layer);
+  
+  // weather icon
+  s_icon_layer = bitmap_layer_create(GRect(SCREEN_WIDTH - 40, SCREEN_HEIGHT - 40, 40, 40));
+  bitmap_layer_set_background_color(s_icon_layer, GColorClear);
+  layer_add_child(root_layer, (Layer *)s_icon_layer);
+  weather_icons_init();
 }
 
 static void main_window_unload(Window *window) {
@@ -126,17 +155,25 @@ static void inbox_received_callback(DictionaryIterator *iter, void *context) {
   Tuple *t = dict_read_first(iter);
   
   static char weather_buf[10];
+  int i;
   
   while (t) {
     switch (t->key) {
     case KEY_TEMP:
       snprintf(weather_buf, sizeof(weather_buf), "%dDC", (int)t->value->int32);
+      smooth_text_layer_set_text(s_weather_layer, weather_buf);
+      break;
+    case KEY_ICON:
+      i = (int)t->value->int32;
+      layer_set_hidden((Layer *)s_icon_layer, i < 0); // hide layer if not valid icon
+      if (i >= 0)
+        bitmap_layer_set_bitmap(s_icon_layer, s_weather_icons[(int)t->value->int32]);
     }
     
     t = dict_read_next(iter);
   }
   
-  smooth_text_layer_set_text(s_weather_layer, weather_buf);
+
 }
   
 static void init() {
